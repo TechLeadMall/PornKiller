@@ -1,0 +1,50 @@
+{
+    "manifest_version": 3,
+    "name": "__MSG_extension_name__",
+    "description": "__MSG_extension_description__",
+    "default_locale": "zh_CN",
+    "version": "0.8",
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "images/extension-icon-16.png",
+            "19": "images/extension-icon-19.png",
+            "32": "images/extension-icon-32.png",
+            "38": "images/extension-icon-38.png",
+            "48": "images/extension-icon-48.png",
+            "72": "images/extension-icon-72.png"
+        }
+    },
+    "icons": {
+        "48": "images/extension-icon-48.png",
+        "96": "images/extension-icon-96.png",
+        "128": "images/extension-icon-128.png",
+        "256": "images/extension-icon-256.png",
+        "512": "images/extension-icon-512.png"
+    },
+    "content_scripts": [
+        {
+            "run_at": "document_end",
+            "matches": [
+                "*://twitter.com/*"
+            ],
+            "js": [
+                "/content.js"
+            ],
+            "css": [
+                "/content.css"
+            ]
+        }
+    ],
+    "permissions": [
+        "tabs",
+        "storage"
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+            ],
+            "matches": ["*://twitter.com/*"]
+        }
+    ]
+}

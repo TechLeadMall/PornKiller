@@ -1,0 +1,38 @@
+{
+  "name": "porn-killer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint",
+    "build-watch": "vue-cli-service  --env.NODE_ENV=development build-watch --mode development"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "core-js": "^3.8.3",
+    "element-plus": "^2.3.12",
+    "file-saver": "^2.0.5",
+    "js-cookie": "^3.0.5",
+    "jsencrypt": "^3.3.2",
+    "vant": "^4.7.0",
+    "vue": "^3.2.13",
+    "vuex": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.179",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-eslint": "~5.0.0",
+    "@vue/cli-plugin-router": "~5.0.0",
+    "@vue/cli-plugin-typescript": "~5.0.0",
+    "@vue/cli-service": "~5.0.0",
+    "@vue/eslint-config-typescript": "^9.1.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-vue": "^8.0.3",
+    "jquery": "^3.7.1",
+    "typescript": "~4.5.5",
+    "vue-cli-plugin-chrome-extension-cli": "~1.1.4"
+  }
+}
