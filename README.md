@@ -84,7 +84,7 @@
 
 
 其中有帮忙对项目推广的大V[高中生的幽灵](https://twitter.com/shikadajyokaA)、[尼古丁真](https://twitter.com/LitangHospital2)，负责管理电报群的[233355607](https://twitter.com/kong233333)，有为项目出谋划策的高知[牡蛎](https://twitter.com/muli1640092)，有找黄推达人[遇见橘子](https://twitter.com/yujian_juzi)，
-有国宝级鉴黄大师（我觉得没个几年看黄推经验真得不一定有这个水平）[](https://twitter.com/AAAsuka789)、染 缸、老师 清丝 近平版、No、橘子、0x5E，还有提供了一部分名单的[finetuned](https://twitter.com/finedtune)。
+有国宝级鉴黄大师（我觉得没个几年看黄推经验真得不一定有这个水平）[AAAsuka789](https://twitter.com/AAAsuka789)、染 缸、老师 清丝 近平版、No、橘子、0x5E，还有提供了一部分名单的[finetuned](https://twitter.com/finedtune)。
 
 另外还有很多帮助过但未能记下的人，以及排行榜上的500多人：
 
