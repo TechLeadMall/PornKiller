@@ -90,7 +90,7 @@
                     <!-- <el-form-item label="后台自动清除黄推">
                         <el-switch v-model="config.backgroundRun" />
                     </el-form-item> -->
-                    
+
                     <el-tooltip
                     class="box-item"
                     effect="light"
@@ -219,6 +219,7 @@ import { ElMessage } from 'element-plus'
 
 // const config = reactive(getSharedConfig());
 
+const cookie = JSON.parse(Cookies.get("num") ?? "{}")
 
 export default defineComponent({
     name: "PopupView",
@@ -227,10 +228,10 @@ export default defineComponent({
     },
     data() {
         return {
-            robotNum: 0,
-            scamNum: 0,
-            commonNum: 0,
-            resumeNum:0,
+            robotNum: cookie.robotNum ?? 0,
+            scamNum: cookie.scamNum ?? 0,
+            commonNum: cookie.commonNum ?? 0,
+            resumeNum: cookie.resumeNum ?? 0,
             config:{
                 backgroundRun: false,    
                 token: "",
@@ -296,6 +297,12 @@ export default defineComponent({
                 this.scamNum = res.data.scamNum
                 this.commonNum = res.data.commonNum
                 this.resumeNum = res.data.resumeNum
+                Cookies.set("num", JSON.stringify({
+                    robotNum: res.data.robotNum,
+                    scamNum: res.data.scamNum,
+                    commonNum: res.data.commonNum,
+                    resumeNum: res.data.resumeNum
+                }))
             })
             .catch((error) => {
                 console.log(error);
@@ -337,6 +344,12 @@ export default defineComponent({
                 this.scamNum = res.data.scamNum
                 this.commonNum = res.data.commonNum
                 this.resumeNum = res.data.resumeNum
+                Cookies.set("num", JSON.stringify({
+                    robotNum: res.data.robotNum,
+                    scamNum: res.data.scamNum,
+                    commonNum: res.data.commonNum,
+                    resumeNum: res.data.resumeNum
+                }))
             })
             .catch((error) => {
                 console.log(error);
@@ -418,6 +431,12 @@ export default defineComponent({
                                     that.scamNum = res.data.scamNum
                                     that.commonNum = res.data.commonNum
                                     that.resumeNum = res.data.resumeNum
+                                    Cookies.set("num", JSON.stringify({
+                                        robotNum: res.data.robotNum,
+                                        scamNum: res.data.scamNum,
+                                        commonNum: res.data.commonNum,
+                                        resumeNum: res.data.resumeNum
+                                    }))
                                 })
                                 .catch((error) => {
                                     console.log(error);
@@ -561,9 +580,9 @@ export default defineComponent({
 
 /*组件外盒子 */
 .h5bbx7_1{
-  
+
 }
- 
+
 /* 设置输入框的高度 */
 .h5bbx7_1 /deep/ .el-input-number--mini {
     width: 80px;
@@ -573,23 +592,23 @@ export default defineComponent({
   width: 80px;
   height: 24px;
   padding: 0 28px;
- 
+
 }
- 
+
 .h5bbx7_1 /deep/ .el-input-number__decrease:hover:not(.is-disabled)~.el-input .el-input__inner:not(.is-disabled), .h5bbx7_1 /deep/ .el-input-number__increase:hover:not(.is-disabled)~.el-input .el-input__inner:not(.is-disabled){
   border-color: #eee;
- 
+
 }
- 
+
 .h5bbx7_1 /deep/ .el-input-number__increase {
   height: 24px;
   width: 24px;
- 
+
 }
- 
+
 .h5bbx7_1 /deep/ .el-input-number__decrease {
   width: 24px;
   height: 24px;
- 
+
 }
 </style>
