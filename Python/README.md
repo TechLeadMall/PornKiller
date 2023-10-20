@@ -6,7 +6,7 @@
 
  pip install redis
 
- 设置机器人token
+ 找到https://t.me/BotFather，新建机器人，设置机器人token
 
  python telegrambot.py
 
