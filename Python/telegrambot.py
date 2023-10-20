@@ -33,7 +33,6 @@ import pickle
 import threading
 import nest_asyncio
 from datetime import timedelta
-# from deleteMsgModule import deleteTwoMsg,deleteMsg 
 
 from datetime import datetime
 
@@ -54,6 +53,16 @@ botContextMap ={}
 redisClient = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 
+#删除telegram群组信息
+async def deleteMsg( context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId: str, secondNum):
+    await asyncio.sleep(secondNum)
+    await context.bot.deleteMessage(chat_id=chatId, 
+                        message_id=messageId) 
+async def deleteTwoMsg(context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId1: str,messageId2: str, secondNum):
+    await asyncio.sleep(secondNum)
+    # context = botContextMap[url]['context'] 
+    await context.bot.deleteMessage(chatId, messageId1) 
+    await context.bot.deleteMessage(chatId, messageId2) 
 
 async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Summarize a users poll vote"""
@@ -99,7 +108,7 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
             
             
             loop=asyncio.get_event_loop()
-            loop.create_task(deleteTwoMsg(context, answered_poll["chat_id"], answered_poll["message_id"],answered_poll["orginal_message_id"]))
+            loop.create_task(deleteTwoMsg(context, answered_poll["chat_id"], answered_poll["message_id"],answered_poll["orginal_message_id"],60))
             # deleteMsgTimer = Timer(10, deleteTwoMsg,(context, answered_poll["chat_id"], answered_poll["message_id"],answered_poll["orginal_message_id"]))
             # deleteMsgTimer.start()
             data = answered_poll["vote"]
@@ -113,7 +122,7 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode=ParseMode.HTML,
             )
             
-            # loop.create_task(deleteMsg(context, answered_poll["chat_id"], message.message_id))
+            loop.create_task(deleteMsg(context, answered_poll["chat_id"], message.message_id),600)
 
 
 async def sendHttp(data):
@@ -178,15 +187,7 @@ async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text_caps = ' '.join(context.args).upper()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
 
-async def deleteMsg( context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId: str):
-    await asyncio.sleep(60)
-    await context.bot.deleteMessage(chat_id=chatId, 
-                        message_id=messageId) 
-async def deleteTwoMsg(context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId1: str,messageId2: str):
-    await asyncio.sleep(60)
-    # context = botContextMap[url]['context'] 
-    await context.bot.deleteMessage(chatId, messageId1) 
-    await context.bot.deleteMessage(chatId, messageId2) 
+
 #获取twitter用户信息，发起投票
 
 async def ws_handle(websocket: WebSocketServerProtocol, path: str):
@@ -227,7 +228,7 @@ async def ws_handle(websocket: WebSocketServerProtocol, path: str):
                     parse_mode=ParseMode.HTML
                 )
                 loop=asyncio.get_event_loop()
-                loop.create_task(deleteTwoMsg(context, update.effective_chat.id,message.message_id,update.message.id))
+                loop.create_task(deleteTwoMsg(context, update.effective_chat.id,message.message_id,update.message.id,15))
 
                 hasCreatePoll = False
           
@@ -291,6 +292,5 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.wait(tasks))
     loop.close()
-
 
 
