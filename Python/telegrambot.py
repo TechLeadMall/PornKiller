@@ -24,6 +24,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
+    CallbackContext,
     MessageHandler,
     PollAnswerHandler,
     PollHandler,
@@ -36,10 +37,12 @@ from datetime import timedelta
 
 from datetime import datetime
 
+from telegram.ext._callbackcontext import CallbackContext
 
 BASE_URL = "https://twitter.cyberworld.win/server/"
 CHAT_ID = -1001858815856                #群聊ID
-TOTAL_VOTER_COUNT = 6                   #投票数
+
+TOTAL_VOTER_COUNT = 6                  #投票数
 
 nest_asyncio.apply()
 logging.basicConfig(
@@ -49,6 +52,7 @@ logging.basicConfig(
 
 CONNECTIONS = set()
 botContextMap ={}
+globalContext = {}
 
 redisClient = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -56,8 +60,7 @@ redisClient = redis.StrictRedis(host='localhost', port=6379, db=0)
 #删除telegram群组信息
 async def deleteMsg( context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId: str, secondNum):
     await asyncio.sleep(secondNum)
-    await context.bot.deleteMessage(chat_id=chatId, 
-                        message_id=messageId) 
+    await context.bot.deleteMessage(chatId, messageId) 
 async def deleteTwoMsg(context: ContextTypes.DEFAULT_TYPE,chatId:str, messageId1: str,messageId2: str, secondNum):
     await asyncio.sleep(secondNum)
     # context = botContextMap[url]['context'] 
@@ -108,11 +111,14 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
             
             
             loop=asyncio.get_event_loop()
-            loop.create_task(deleteTwoMsg(context, answered_poll["chat_id"], answered_poll["message_id"],answered_poll["orginal_message_id"],60))
+            loop.create_task(deleteMsg(context, answered_poll["chat_id"], answered_poll["message_id"],60))
+
+            if 'orginal_message_id' in answered_poll:
+                loop.create_task(deleteMsg(context, answered_poll["chat_id"], answered_poll["orginal_message_id"],60))
             # deleteMsgTimer = Timer(10, deleteTwoMsg,(context, answered_poll["chat_id"], answered_poll["message_id"],answered_poll["orginal_message_id"]))
             # deleteMsgTimer.start()
             data = answered_poll["vote"]
-            result = await sendHttp(data)
+            result = await addVoteInfo(data)
             # print(result)
             # print(result.text)
             data = json.loads(result.text)
@@ -122,10 +128,10 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode=ParseMode.HTML,
             )
             
-            loop.create_task(deleteMsg(context, answered_poll["chat_id"], message.message_id),600)
+            loop.create_task(deleteMsg(context, answered_poll["chat_id"], message.message_id,600))
 
 
-async def sendHttp(data):
+async def addVoteInfo(data):
 
     # 需要发送http请求的url地址
     url = BASE_URL+"twitter/userVote/addVoteInfo" 
@@ -177,10 +183,17 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
             botContextMap[url] = {"confirm":True,"context":context,"update":update}
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if (update.effective_chat.id == CHAT_ID ):
+        # global staticContext
+        # global staticUpdate
+        # staticContext = context
+        # staticUpdate = update
+        # redisClient.set("staticBot",pickle.dumps(staticContext.bot))
         websockets.broadcast(CONNECTIONS, update.message.text)
-        
-        # redisClient.set("botContextMap:"+update.message.text,pickle.dumps({"context":context,"update":update}))
-        botContextMap[update.message.text] = {"context":context,"update":update}
+
+
+        botContextMap[update.message.text] = {"context":context, "tel_message": update.message,
+                                  "effective_user": update.effective_user}
+
     
 
 async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,15 +208,35 @@ async def ws_handle(websocket: WebSocketServerProtocol, path: str):
     
     async for message in websocket:
         jsonmsg = json.loads(message)
-        context = botContextMap[jsonmsg['url']]['context'] 
-        update =  botContextMap[jsonmsg['url']]['update'] 
+        
+        if ('isFromTwitter' in jsonmsg and jsonmsg['isFromTwitter'] == True):
+            # CallbackContext()
+            # context = staticContext
+            # update =  staticUpdate
 
-        questions = [ "我觉得它是机器人引流黄推。", "我觉得它是疑似诈骗黄推。", "我觉得它是普通黄推。","我觉得它不是黄推,请移入白名单。"]
+            urlText = 'https://x.com/' + jsonmsg['userItem']['screen_name'][1:]
+            originMessage = await globalContext.bot.send_message(
+                    CHAT_ID,
+                    urlText+" 由推友"+jsonmsg['twitterName']+"发起，初步认为它是"+jsonmsg['kind'],
+                    parse_mode=ParseMode.HTML
+            )
+            effective_user = {'id':"twitter"}
+            botContextMap[urlText] = {"context": globalContext, "tel_message": originMessage,"effective_user": effective_user, "twitter_create_by":jsonmsg['twitterUserId']}
+            jsonmsg['url'] = urlText
+            
+        context = botContextMap[jsonmsg['url']]['context']
+        tel_message = botContextMap[jsonmsg['url']]['tel_message']
+        effective_user = botContextMap[jsonmsg['url']]['effective_user']
+        if 'twitter_create_by' in botContextMap[jsonmsg['url']]:
+            twitter_create_by = botContextMap[jsonmsg['url']]['twitter_create_by']
+        else:
+            twitter_create_by = None
+        questions = [ "我觉得它是垃圾引流账户。", "我觉得它是疑似诈骗黄推。", "我觉得它是普通黄推。","我觉得它不是黄推,请移入白名单。"]
         hasCreatePoll = True
         if ('confirm' in botContextMap[jsonmsg['url']] and botContextMap[jsonmsg['url']]['confirm'] == True):
             
             message = await context.bot.send_poll(
-                update.effective_chat.id,
+                CHAT_ID,
                 '请对'+jsonmsg['userItem']['name']+'投票表决。',
                 questions,
                 is_anonymous=False,
@@ -215,7 +248,7 @@ async def ws_handle(websocket: WebSocketServerProtocol, path: str):
             data = json.loads(result.text)
             if (data['code']== 200):
                 message = await context.bot.send_poll(
-                    update.effective_chat.id,
+                    CHAT_ID,
                     '请对'+jsonmsg['userItem']['name']+'投票表决。',
                     questions,
                     is_anonymous=False,
@@ -223,28 +256,29 @@ async def ws_handle(websocket: WebSocketServerProtocol, path: str):
                 )
             else:
                 message = await context.bot.send_message(
-                    update.effective_chat.id,
+                    CHAT_ID,
                     data['msg'],
                     parse_mode=ParseMode.HTML
                 )
                 loop=asyncio.get_event_loop()
-                loop.create_task(deleteTwoMsg(context, update.effective_chat.id,message.message_id,update.message.id,15))
+                loop.create_task(deleteTwoMsg(context, CHAT_ID,message.message_id,tel_message.id,15))
 
                 hasCreatePoll = False
-          
+        
         # Save some info about the poll the bot_data for later use in receive_poll_answer
         if hasCreatePoll :
             payload = {
                 message.poll.id: {
                     "questions": questions,
                     "message_id": message.message_id,
-                    "orginal_message_id": update.message.id,
-                    "chat_id": update.effective_chat.id,
+                    "orginal_message_id": tel_message.id,
+                    "chat_id": CHAT_ID,
                     "answers": 0,
                     "vote":{
                         "twitter_user": jsonmsg,
                         "list":[],
-                        "creator": update.effective_user['id']
+                        "creator": effective_user['id'],
+                        "twitter_create_by":twitter_create_by
 
                     }
                 }
@@ -270,6 +304,8 @@ async def bot():
     application = ApplicationBuilder().token('设置机器人token').build()
     
 
+    global globalContext
+    globalContext = CallbackContext(application,CHAT_ID)
     echo_handler = MessageHandler(filters.TEXT & (filters.Entity("url") | filters.Entity("text_link"))
 , echo)
     
@@ -292,5 +328,6 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.wait(tasks))
     loop.close()
+
 
 
