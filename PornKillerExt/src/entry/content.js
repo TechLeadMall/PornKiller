@@ -4,9 +4,13 @@ import { getToken, setToken, removeToken } from '@/utils/auth'
 import { getCodeImg } from "@/api/login";
 import Cookies from "js-cookie";
 import { getPornList, updateUserBlock,updateUserResume} from "@/api/twitter/porn";
+import { getTwitterName} from "@/api/login";
 import $ from 'jquery';
 import { createApp } from 'vue'
+import moment from "moment";
 import App from './content.vue'
+
+import { addReplyList,updateHideStatus } from "@/api/twitter/replyRecord";
 // 1. 引入你需要的组件
 // 2. 引入组件样式
 
@@ -27,6 +31,10 @@ chrome.storage.sync.get(getSharedConfig(), (storageData) => {
         fireEvent();
         console.log("running");
     }
+    if (storageData.runHideFunc == true) {
+        fireEventInfluencer();
+        console.log("running");
+    }
 });
 
 chrome.storage.onChanged.addListener((changes) => {
@@ -35,6 +43,16 @@ chrome.storage.onChanged.addListener((changes) => {
             // chrome.storage.sync.set({ running: true });
             config.run = true;
             fireEvent();
+            console.log("running");
+        }else{
+            config.run = false;
+        }
+    }
+    if (changes.runHideFunc != undefined) {
+        if (changes.runHideFunc.newValue == true) {
+            // chrome.storage.sync.set({ running: true });
+            config.runHideFunc = true;
+            fireEventInfluencer();
             console.log("running");
         }else{
             config.run = false;
@@ -64,6 +82,15 @@ chrome.storage.onChanged.addListener((changes) => {
     }
     if (changes.resumeTweeter != undefined) {
         config.resumeTweeter = changes.resumeTweeter.newValue;
+    }
+    if (changes.tweetNum != undefined) {
+        config.tweetNum = changes.tweetNum.newValue;
+    }
+    if (changes.loopMinute != undefined) {
+        config.loopMinute = changes.loopMinute.newValue;
+    }
+    if (changes.onlyGetTweet != undefined) {
+        config.onlyGetTweet = changes.onlyGetTweet.newValue;
     }
     // helperKit.updateConfig(changes as { [p in IDefaultStaticConfigKeys]: chrome.storage.StorageChange } )
 })
@@ -165,6 +192,301 @@ const ajax = axios.create({
         'X-Csrf-Token': get_cookie('ct0')
     }
 })
+
+async function hideReply(tweetId) {
+    try {
+
+        var result = await ajax.post('https://twitter.com/i/api/graphql/pjFnHGVqCjTcZol0xcBJjw/ModerateTweet', {
+            queryId: "pjFnHGVqCjTcZol0xcBJjw",
+            variables: 
+            {tweetId: tweetId}
+        }, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return result;
+        //   console.log(result);
+
+        // Update blocked IDs list in GM storage
+
+    } catch (err) {
+        throw (err);
+        // Handle errors as needed
+    }
+}
+
+async function getUserByScreenName(screenName) {
+    try {
+
+        var returnData = {};
+        var result = await ajax.get('https://twitter.com/i/api/graphql/G3KGOASz96M-Qu0nwmGXNg/UserByScreenName?variables=%7B%22screen_name%22%3A%22'+screenName+'%22%2C%22withSafetyModeUserFields%22%3Atrue%7D&features=%7B%22hidden_profile_likes_enabled%22%3Atrue%2C%22hidden_profile_subscriptions_enabled%22%3Atrue%2C%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22subscriptions_verification_info_is_identity_verified_enabled%22%3Atrue%2C%22subscriptions_verification_info_verified_since_enabled%22%3Atrue%2C%22highlights_tweets_tab_ui_enabled%22%3Atrue%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%7D&fieldToggles=%7B%22withAuxiliaryUserLabels%22%3Afalse%7D',
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+        
+        try {
+            var userItem = {};
+            var user;
+            var tweet;
+            var result;
+            var user = result['data']['data']['user']['result']['legacy'];
+            // item.full_text = tweets[i]['content']['itemContent']['tweet_results']['result']['legacy']['full_text'];
+            // item.id_str = tweets[i]['content']['itemContent']['tweet_results']['result']['legacy']['id_str'];
+
+            userItem.created_at = moment(new Date(user['created_at'])).format("yyyy-MM-DD hh:mm:ss");
+            userItem.description = user['description'];
+            userItem.fast_followers_count = user['fast_followers_count'];
+            userItem.favourites_count = user['favourites_count'];
+            userItem.followers_count = user['followers_count'];
+            userItem.friends_count = user['friends_count'];
+            userItem.media_count = user['media_count'];
+            userItem.name = user['name'];
+            userItem.normal_followers_count = user['normal_followers_count'];
+            userItem.profile_banner_url = user['profile_banner_url'];
+            userItem.profile_image_url_https = user['profile_image_url_https'];
+            userItem.screen_name = '@'+user['screen_name'];
+            userItem.statuses_count = user['statuses_count'];
+            userItem.verified = user['verified'];
+            userItem.user_id_str = result['data']['data']['user']['result']['rest_id']
+
+        } catch (err) {
+            console.log(err);
+            // Handle errors as needed
+        }
+        
+        returnData.userItem =  userItem
+        return returnData;
+        // Update blocked IDs list in GM storage
+
+    } catch (err) {
+        throw (err);
+        // Handle errors as needed
+    }
+}
+async function getTweetDetails(id) {
+    try {
+
+        var data = { user_id: id }
+
+        var nextPageCursor = "";
+
+        var returnData = {};
+        var tweetList = [];
+        var userList = [];
+        while (true) {
+            var result;
+
+            await delay(500);
+            if (nextPageCursor == "") {
+                result = await ajax.get('https://twitter.com/i/api/graphql/xOhkmRac04YFZmOzU9PJHg/TweetDetail?variables=%7B%22focalTweetId%22%3A%22' + id + '%22%2C%22with_rux_injections%22%3Afalse%2C%22includePromotedContent%22%3Atrue%2C%22withCommunity%22%3Atrue%2C%22withQuickPromoteEligibilityTweetFields%22%3Atrue%2C%22withBirdwatchNotes%22%3Atrue%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D&features=%7B%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22view_counts_everywhere_api_enabled%22%3Atrue%2C%22longform_notetweets_consumption_enabled%22%3Atrue%2C%22responsive_web_twitter_article_tweet_consumption_enabled%22%3Afalse%2C%22tweet_awards_web_tipping_enabled%22%3Afalse%2C%22freedom_of_speech_not_reach_fetch_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Atrue%2C%22longform_notetweets_rich_text_read_enabled%22%3Atrue%2C%22longform_notetweets_inline_media_enabled%22%3Atrue%2C%22responsive_web_media_download_video_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Afalse%7D&fieldToggles=%7B%22withArticleRichContentState%22%3Afalse%7D',
+                    {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    });
+
+            } else {
+
+                result = await ajax.get('https://twitter.com/i/api/graphql/xOhkmRac04YFZmOzU9PJHg/TweetDetail?variables=%7B%22focalTweetId%22%3A%22' + id + '%22%2C%22cursor%22%3A%22' +
+                    nextPageCursor +
+                    '%22%2C%22referrer%22%3A%22messages%22%2C%22controller_data%22%3A%22DAACDAABDAABCgABAAAAAAAAAAAKAAkXdmdFVtuwAQAAAAA%3D%22%2C%22with_rux_injections%22%3Afalse%2C%22includePromotedContent%22%3Atrue%2C%22withCommunity%22%3Atrue%2C%22withQuickPromoteEligibilityTweetFields%22%3Atrue%2C%22withBirdwatchNotes%22%3Atrue%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D&features=%7B%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22view_counts_everywhere_api_enabled%22%3Atrue%2C%22longform_notetweets_consumption_enabled%22%3Atrue%2C%22responsive_web_twitter_article_tweet_consumption_enabled%22%3Afalse%2C%22tweet_awards_web_tipping_enabled%22%3Afalse%2C%22freedom_of_speech_not_reach_fetch_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Atrue%2C%22longform_notetweets_rich_text_read_enabled%22%3Atrue%2C%22longform_notetweets_inline_media_enabled%22%3Atrue%2C%22responsive_web_media_download_video_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Afalse%7D&fieldToggles=%7B%22withArticleRichContentState%22%3Afalse%7D',
+                    {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    });
+            }
+            // if (result['errors'][0]['message']){
+
+            // };
+            var replys = result['data']['data']['threaded_conversation_with_injections_v2']['instructions'][0]['entries'];
+            for (let i = 0; i < replys.length - 1; i++) {
+                try {
+                    var item = {};
+                    var tweetItem = {};
+                    var userItem = {};
+                    var user;
+                    var tweet;
+                    var result;
+                    if (replys[i]['entryId'].indexOf('tweet')>=0){
+                        user =  replys[i]['content']['itemContent']['tweet_results']['result']['core']['user_results']['result']['legacy'];
+                        tweet = replys[i]['content']['itemContent']['tweet_results']['result']['legacy'];
+                        result = replys[i]['content']['itemContent']['tweet_results']['result']
+                    }else{
+                        user = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result']['core']['user_results']['result']['legacy'];
+                        tweet = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result']['legacy'];
+                        result = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result'];
+                    }
+                    userItem.created_at = moment(new Date(user['created_at'])).format("yyyy-MM-DD hh:mm:ss");
+                    userItem.description = user['description'];
+                    userItem.fast_followers_count = user['fast_followers_count'];
+                    userItem.favourites_count = user['favourites_count'];
+                    userItem.followers_count = user['followers_count'];
+                    userItem.friends_count = user['friends_count'];
+                    userItem.media_count = user['media_count'];
+                    userItem.name = user['name'];
+                    userItem.normal_followers_count = user['normal_followers_count'];
+                    userItem.profile_banner_url = user['profile_banner_url'];
+                    userItem.profile_image_url_https = user['profile_image_url_https'];
+                    userItem.screen_name = '@'+user['screen_name'];
+                    userItem.statuses_count = user['statuses_count'];
+                    userItem.verified = user['verified'];
+                    userItem.user_id_str = tweet['user_id_str'];
+
+                    tweetItem.conversation_id_str = tweet['conversation_id_str'];
+                    tweetItem.bookmark_count = tweet['bookmark_count'];
+                    tweetItem.created_at =  moment(new Date(tweet['created_at'])).format("yyyy-MM-DD hh:mm:ss");;
+                    tweetItem.favorite_count = tweet['favorite_count'];
+                    tweetItem.full_text = tweet['full_text'];
+                    tweetItem.id_str = tweet['id_str'];
+                    tweetItem.in_reply_to_screen_name = tweet['in_reply_to_screen_name'];
+                    tweetItem.in_reply_to_status_id_str = tweet['in_reply_to_status_id_str'];
+                    tweetItem.in_reply_to_user_id_str = tweet['in_reply_to_user_id_str'];
+                    tweetItem.quoted_status_id_str = tweet['quoted_status_id_str'];
+                    tweetItem.user_id_str = tweet['user_id_str'];
+                    tweetItem.reply_count = tweet['reply_count'];
+                    tweetItem.retweet_count = tweet['retweet_count'];
+                    tweetItem.quote_count = tweet['quote_count'];
+                    tweetItem.view_count = result['views']['count'];
+                    try{
+                        tweetItem['media_url_https1'] = tweet['entities']['media'][0]['media_url_https'];
+                        tweetItem['media_url_https2'] = tweet['entities']['media'][1]['media_url_https'];
+                        tweetItem['media_url_https3'] = tweet['entities']['media'][3]['media_url_https'];
+                        tweetItem['media_url_https4'] = tweet['entities']['media'][4]['media_url_https'];
+                    } catch (err) {
+                        // Handle errors as needed
+                    }
+
+                    tweetItem.source = result['source'];
+                    // tweetItem.rest = result['source'];
+                    tweetList.push(tweetItem);
+                    userList.push(userItem);
+                    // item.tweet = tweetItem;
+                    // item.user = userItem;
+                    // arr.push(item);
+                } catch (err) {
+                    console.log(err);
+                    // Handle errors as needed
+                }
+            }
+            try {
+                if (replys[replys.length - 1]['content']['itemContent']['cursorType'] == 'ShowMoreThreads') {
+                    break;
+                }
+
+                nextPageCursor = replys[replys.length - 1]['content']['itemContent']['value']
+            } catch (err) {
+                break;
+                // Handle errors as needed
+            }
+        }
+        returnData.tweetList =  tweetList
+        returnData.userList =  userList
+        returnData.inReplyToStatusIdStr =  id
+        // console.log(result);
+        // console.log(arr);
+        return returnData;
+        // Update blocked IDs list in GM storage
+
+    } catch (err) {
+        throw (err);
+        // Handle errors as needed
+    }
+}
+
+
+async function getUserTweets(userId) {
+    try {
+
+        var tweetList = [];
+        var result = await ajax.get('https://twitter.com/i/api/graphql/SX0nRdNbOSuBDiaw0bsPPQ/UserMedia?variables=%7B%22userId%22%3A%22'+userId+'%22%2C%22count%22%3A20%2C%22includePromotedContent%22%3Afalse%2C%22withClientEventToken%22%3Afalse%2C%22withBirdwatchNotes%22%3Afalse%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D&features=%7B%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22responsive_web_home_pinned_timelines_enabled%22%3Atrue%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22view_counts_everywhere_api_enabled%22%3Atrue%2C%22longform_notetweets_consumption_enabled%22%3Atrue%2C%22responsive_web_twitter_article_tweet_consumption_enabled%22%3Afalse%2C%22tweet_awards_web_tipping_enabled%22%3Afalse%2C%22freedom_of_speech_not_reach_fetch_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Atrue%2C%22longform_notetweets_rich_text_read_enabled%22%3Atrue%2C%22longform_notetweets_inline_media_enabled%22%3Atrue%2C%22responsive_web_media_download_video_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Afalse%7D',
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+        
+        try {
+            var replys = result['data']['data']['user']['result']['timeline_v2']['timeline']['instructions'][0]['entries'];
+            for (let i = 0; i < replys.length - 1; i++) {
+                try {
+                    var user;
+                    var tweet;
+                    var result;
+                    if (replys[i]['entryId'].indexOf('tweet')>=0){
+                        user =  replys[i]['content']['itemContent']['tweet_results']['result']['core']['user_results']['result']['legacy'];
+                        tweet = replys[i]['content']['itemContent']['tweet_results']['result']['legacy'];
+                        result = replys[i]['content']['itemContent']['tweet_results']['result'];
+                        tweetList.push(tweet['id_str']);
+                    }
+                    // else{
+                    //     user = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result']['core']['user_results']['result']['legacy'];
+                    //     tweet = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result']['legacy'];
+                    //     result = replys[i]['content']['items'][0]['item']['itemContent']['tweet_results']['result'];
+                    // }
+
+                    // tweetItem.conversation_id_str = tweet['conversation_id_str'];
+                    // tweetItem.bookmark_count = tweet['bookmark_count'];
+                    // tweetItem.created_at =  moment(new Date(tweet['created_at'])).format("yyyy-MM-DD hh:mm:ss");;
+                    // tweetItem.favorite_count = tweet['favorite_count'];
+                    // tweetItem.full_text = tweet['full_text'];
+                    // tweetItem.id_str = tweet['id_str'];
+                    // tweetItem.in_reply_to_screen_name = tweet['in_reply_to_screen_name'];
+                    // tweetItem.in_reply_to_status_id_str = tweet['in_reply_to_status_id_str'];
+                    // tweetItem.in_reply_to_user_id_str = tweet['in_reply_to_user_id_str'];
+                    // tweetItem.quoted_status_id_str = tweet['quoted_status_id_str'];
+                    // tweetItem.user_id_str = tweet['user_id_str'];
+                    // tweetItem.reply_count = tweet['reply_count'];
+                    // tweetItem.retweet_count = tweet['retweet_count'];
+                    // tweetItem.quote_count = tweet['quote_count'];
+                    // tweetItem.view_count = result['views']['count'];
+                    // try{
+                    //     tweetItem['media_url_https1'] = tweet['entities']['media'][0]['media_url_https'];
+                    //     tweetItem['media_url_https2'] = tweet['entities']['media'][1]['media_url_https'];
+                    //     tweetItem['media_url_https3'] = tweet['entities']['media'][3]['media_url_https'];
+                    //     tweetItem['media_url_https4'] = tweet['entities']['media'][4]['media_url_https'];
+                    // } catch (err) {
+                    //     // Handle errors as needed
+                    // }
+
+                    // tweetItem.source = result['source'];
+                    // tweetItem.rest = result['source'];
+                    // userList.push(userItem);
+                    // item.tweet = tweetItem;
+                    // item.user = userItem;
+                    // arr.push(item);
+                } catch (err) {
+                    console.log(err);
+                    // Handle errors as needed
+                }
+            // try {
+            //     if (replys[replys.length - 1]['content']['itemContent']['cursorType'] == 'ShowMoreThreads') {
+            //         break;
+            //     }
+
+            //     nextPageCursor = replys[replys.length - 1]['content']['itemContent']['value']
+            // } catch (err) {
+            //     break;
+            //     // Handle errors as needed
+            // }
+        }
+        } catch (err) {
+            console.log(err);
+            // Handle errors as needed
+        }
+        
+        return tweetList;
+        // Update blocked IDs list in GM storage
+
+    } catch (err) {
+        throw (err);
+        // Handle errors as needed
+    }
+}
 async function block_user(id) {
     try {
 
@@ -228,7 +550,7 @@ async function fireEvent() {
                             title: '提示',
                             message: '需先进行机器人校验',
                             duration: 0,
-                            type: 'warnning',
+                            type: 'warning',
                         })
                         // alert("需先进行机器人校验");
                         return;
@@ -417,7 +739,7 @@ async function fireEvent() {
                         title: '提示',
                         message: '需先进行机器人校验',
                         duration: 0,
-                        type: 'warnning',
+                        type: 'warning',
                     })
                     // alert("需先进行机器人校验");
                     return;
@@ -583,4 +905,99 @@ async function fireEvent() {
             }
         }
     }
+}
+
+async function fireEventInfluencer() {
+    var exceptionNum = 0;
+    while(true){
+        if (config.runHideFunc) {
+            for (let j = 0; j < 1; j++) {
+                await delay(800);
+
+                const authenticateHtml = $('iframe[id="arkose_iframe"]');
+                if (authenticateHtml != null && authenticateHtml.length > 0) {
+
+                    ElNotification({
+                        title: '提示',
+                        message: '需先进行机器人校验',
+                        duration: 0,
+                        type: 'warning',
+                    })
+                    // alert("需先进行机器人校验");
+                    return;
+                }
+            }
+
+
+            var text;
+            var hideList = [];
+            let res = await getTwitterName();
+            if (res.twitterName == null){
+                ElNotification({
+                    title: '提示',
+                    message: '请先登录管理系统设置twitter账户名。',
+                    duration: 3000,
+                    type: 'warning',
+                })
+            }
+            let screenName = res.twitterName.substring(1);
+            try{
+                let user = await getUserByScreenName(screenName);
+                var tweetIdList = await getUserTweets(user.userItem.user_id_str);
+                console.log(tweetIdList)
+                if (tweetIdList.length == 0){
+                    ElNotification({
+                        title: '提示',
+                        message: '当前账户下未检测到推文，请核实。',
+                        duration: 3000,
+                        type: 'warning',
+                    })
+                }
+                var tweetNum = tweetIdList.length;
+                if (config.tweetNum <tweetIdList.length){
+                    tweetNum = config.tweetNum;
+                }
+                
+                for (let i =0;i<tweetNum;i++){
+                    var replys = await getTweetDetails(tweetIdList[i]);
+                    
+                    let needHideResult = await addReplyList(replys);
+                    if (!config.onlyGetTweet){
+                        let needHideList = needHideResult.data;
+                        for (let j=0;j<needHideList.length;j++){
+                            await delay(1000);
+                            try{
+                                let result = await hideReply(needHideList[j])
+                                if (result.data.errors== null || result.data.errors.length == 0 )
+                                    hideList.push(needHideList[j])
+                            }catch(e){
+                                
+                            }
+                        }
+                        console.log(needHideResult);
+                    }
+                    await delay(5000);
+                }
+                exceptionNum = 0;
+            }catch(e){
+                exceptionNum++;
+                if (exceptionNum>10){
+                    ElNotification({
+                        title: '提示',
+                        message: '出现异常，请刷新检查登录状态或等待一段时间重新启动监控',
+                        duration: 3000,
+                        type: 'warning',
+                    })
+                    chrome.storage.sync.set({runHideFunc:false});
+
+                }
+            }
+            if (hideList.length>0)
+                await updateHideStatus({"hideList":hideList});
+            await delay(config.loopMinute*60*1000);
+
+
+        }
+    }
+    
 }

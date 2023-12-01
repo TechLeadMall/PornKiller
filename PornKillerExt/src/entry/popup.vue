@@ -60,8 +60,13 @@
                 </el-form-item>
 
                 <el-form-item style="width: 100%">
-                    <el-button size="medium" type="info" style="width: 100%" @click="handleRegister">
+                    <el-button size="medium" type="success" style="width: 100%" @click="handleRegister">
                         <span>立即注册</span>
+                    </el-button>
+                </el-form-item>
+                <el-form-item style="width: 100%">
+                    <el-button size="medium" type="info" style="width: 100%" @click="anonymousLogin">
+                        <span>匿名登录</span>
                     </el-button>
                 </el-form-item>
             </el-form>
@@ -83,110 +88,151 @@
             </div>
         </div>
         <div v-else>
+            <el-tabs v-model="activeTabName" class="demo-tabs" @tab-click="handleClick" type="border-card">
+                <el-tab-pane label="常用功能" name="common">
 
-            <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" style="margin-top:20px;">
-                <el-form :model="loginForm" label-width="150px">
+                    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" style="margin-top:0px;">
+                        <el-form :model="loginForm" label-width="150px">
 
-                    <!-- <el-form-item label="后台自动清除黄推">
-                        <el-switch v-model="config.backgroundRun" />
-                    </el-form-item> -->
+                        <!-- <el-form-item label="后台自动清除黄推">
+                            <el-switch v-model="config.backgroundRun" />
+                        </el-form-item> -->
 
-                    <el-tooltip
-                    class="box-item"
-                    effect="light"
-                    content="建议设置数量为300个，运行结束后可再次点击启动"
-                    placement="bottom-end"
-                    >
-                        <el-form-item label="屏蔽数量限制">
-                            <el-input-number v-model="config.limitNum" :min="1" :max="500" :step="50"  size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                        <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="建议设置数量为300个，运行结束后可再次点击启动。"
+                        placement="bottom-end"
+                        >
+                            <el-form-item label="屏蔽数量限制">
+                                <el-input-number v-model="config.limitNum" :min="1" :max="500" :step="50"  size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                            </el-form-item>
+                        </el-tooltip>
+                        <!-- <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="建议最大数量300个，运行结束后可再次点击启动"
+                        placement="bottom-end"
+                        >
+                            <el-form-item label="屏蔽数量限制">
+                                <el-input-number v-model="config.limitNum" :min="1" :max="500" :step="50" @change="handleChange" size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                            </el-form-item>
+                        </el-tooltip> -->
+                        <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="开启后，仅完成任务后提示被禁黄推数量。"
+                        placement="bottom-end"
+                        >
+                        <el-form-item :label="'是否静默运行'">
+                            <div style="width:40px;"/>
+                            <!-- <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
+                                @click="openWaitPage('robot')" :underline="false">（{{ robotNum }}）</el-link> -->
+
+                            <el-switch v-model="config.quietMode" />
                         </el-form-item>
-                    </el-tooltip>
-                    <!-- <el-tooltip
-                    class="box-item"
-                    effect="light"
-                    content="建议最大数量300个，运行结束后可再次点击启动"
-                    placement="bottom-end"
-                    >
-                        <el-form-item label="屏蔽数量限制">
-                            <el-input-number v-model="config.limitNum" :min="1" :max="500" :step="50" @change="handleChange" size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                        </el-tooltip>
+                        <el-form-item :label="'禁垃圾引流账户'">
+                            <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
+                                @click="openWaitPage('robot')" :underline="false">（{{ robotNum }}）</el-link>
+
+                            <el-switch v-model="config.blockRobotTweeter" />
                         </el-form-item>
-                    </el-tooltip> -->
-                    <el-tooltip
-                    class="box-item"
-                    effect="light"
-                    content="开启后，仅完成任务后提示被禁黄推数量"
-                    placement="bottom-end"
-                    >
-                    <el-form-item :label="'是否静默运行'">
-                        <div style="width:40px;"/>
-                        <!-- <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
-                            @click="openWaitPage('robot')" :underline="false">（{{ robotNum }}）</el-link> -->
-
-                        <el-switch v-model="config.quietMode" />
-                    </el-form-item>
-                    </el-tooltip>
-                    <el-form-item :label="'禁机器人引流黄推'">
-                        <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
-                            @click="openWaitPage('robot')" :underline="false">（{{ robotNum }}）</el-link>
-
-                        <el-switch v-model="config.blockRobotTweeter" />
-                    </el-form-item>
-                    <el-form-item label="禁疑似诈骗黄推">
-                        <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
-                            @click="openWaitPage('scam')" :underline="false">（{{ scamNum }}）</el-link>
-
-                        <el-switch v-model="config.blockScamTweeter" />
-                    </el-form-item>
-                    <el-form-item label="禁普通黄推">
-                        <el-link type="success" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
-                            @click="openWaitPage('common')" :underline="false">（{{ commonNum }}）</el-link>
-
-                        <el-switch v-model="config.blockPornTweeter" />
-                    </el-form-item>
-                    <el-form-item label="恢复误删人员">
-                        <el-link type="success" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
-                            @click="openWaitPage('resume')" :underline="false">（{{ resumeNum }}）</el-link>
-
-                        <el-switch v-model="config.resumeTweeter" />
-                    </el-form-item>
-
-                    <!-- <el-button type="warning">启动</el-button> -->
-
-                </el-form>
-
-                <!-- <el-row>
-                    <el-col :span="12">
                         <el-form-item label="禁疑似诈骗黄推">
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-switch v-model="config.hiddenAIBotTweet" />
-                    </el-col>
-                </el-row>
-                <el-row>
-                    <el-col :span="12">
-                        <el-form-item label="禁所有黄推">
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-switch v-model="config.hiddenAIBotTweet" />
-                    </el-col>
-                </el-row> -->
-            </el-form>
+                            <el-link type="warning" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
+                                @click="openWaitPage('scam')" :underline="false">（{{ scamNum }}）</el-link>
 
-            <el-form-item style="width: 100%">
-                <el-button size="medium" type="primary"
-                    style="width:100%;margin-left:20px;margin-right:20px;text-align:center;" @click="runKiller(config.run)">
-                    <span v-if="config.run != true">启动</span>
-                    <span v-else>暂停</span>
-                </el-button>
+                            <el-switch v-model="config.blockScamTweeter" />
+                        </el-form-item>
+                        <el-form-item label="禁普通黄推">
+                            <el-link type="success" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
+                                @click="openWaitPage('common')" :underline="false">（{{ commonNum }}）</el-link>
 
-                <!-- <el-button :loading="loading" size="medium" type="primary"
-                    style="width:100%;margin-left:20px;margin-right:20px;text-align:center;" @click="runKiller(config.run)">
-                    <span>退出登录</span>
-                </el-button> -->
-            </el-form-item>
-            <div style="background-color:#f0f0f0;">
+                            <el-switch v-model="config.blockPornTweeter" />
+                        </el-form-item>
+                        <el-form-item label="恢复误删人员">
+                            <el-link type="success" style="font-size:14px; font-weight:normal;margin-left:-20px;width:60px;"
+                                @click="openWaitPage('resume')" :underline="false">（{{ resumeNum }}）</el-link>
+
+                            <el-switch v-model="config.resumeTweeter" />
+                        </el-form-item>
+
+
+                        </el-form>
+
+                        </el-form>
+
+                        <el-form-item style="width: 100%">
+                        <el-button size="medium" type="primary"
+                        style="width:100%;margin-left:20px;margin-right:20px;text-align:center;" @click="runKiller(config.run)">
+                        <span v-if="config.run != true">启动</span>
+                        <span v-else>暂停</span>
+                        </el-button>
+
+                        </el-form-item>
+                </el-tab-pane>
+                <el-tab-pane label="高级功能" name="advance">
+                    
+                    <div style="margin-bottom: 10px;text-align:center;">
+                            <el-text class="mx-1" size="large">自动隐藏评论区机器人</el-text>
+                        </div>
+                    <el-form  class="login-form" style="margin-top:0px;">
+                        
+                        <el-form :model="loginForm" label-width="150px">
+                        
+                        <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="建议设置时间为10分钟，间隔过短可能导致异常。"
+                        placement="top"
+                        style=""
+                        >
+                            <el-form-item label="循环时间间隔(分钟)">
+                                <el-input-number v-model="config.loopMinute" :min="1" :max="180" :step="5"  size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                            </el-form-item>
+                        </el-tooltip>
+
+                        <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="当前最大推文数量10个。"
+                        placement="top"
+                        >
+                            <el-form-item label="监控推文数量">
+                                <el-input-number v-model="config.tweetNum" :min="1" :max="10" :step="1"  size="small" style="height:27px;max-height: 27px;line-height:27px;" />
+                            </el-form-item>
+                        </el-tooltip>
+                        <!-- <el-tooltip
+                        class="box-item"
+                        effect="light"
+                        content="针对黄推评论后拉黑无法找到推文的情况，无此情况无须开启。"
+                        placement="top"
+                        >
+                            <el-form-item label="仅获取推文">
+                                <el-switch v-model="config.onlyGetTweet" />
+                            </el-form-item>
+                        </el-tooltip> -->
+                        </el-form>
+
+                        
+                    </el-form>
+                    <div style="margin-bottom: 20px;text-align:center;margin-left:-10px;">
+                            <el-link type="primary" style=""
+                                 :underline="true" @click="openHiddenPage()">查看已隐藏推文</el-link>
+                        </div>
+                    <el-form-item style="width: 100%">
+                        <el-button size="medium" type="primary"
+                        style="width:100%;margin-left:20px;margin-right:20px;text-align:center;" @click="runHideFuncMonitor(config.runHideFunc)">
+                            <span v-if="config.runHideFunc != true">启动监控</span>
+                            <span v-else>暂停监控</span>
+                        </el-button>
+                    </el-form-item>
+
+                </el-tab-pane>
+                
+            </el-tabs>
+                
+            <div style="background-color:#f0f0f0;margin-top:-20px;">
                 <el-row style="padding-top:10px;padding-bottom: 10px;" justify="center">
                     <el-col :span="8" style="text-align:center">
                         <el-link type="primary" style="font-size:12px" @click="openTelegramUrl">社群</el-link>
@@ -213,10 +259,20 @@ import { getCodeImg } from "@/api/login";
 import Cookies from "js-cookie";
 import { encrypt, decrypt } from "@/utils/jsencrypt";
 import SvgIcon from "@/components/SvgIcon"; // svg component
-import { login, logout, getInfo, getCount } from "@/api/login";
+import { login, logout, getInfo, getCount,register } from "@/api/login";
 import { getToken, setToken, removeToken } from '@/utils/auth'
-import { ElMessage } from 'element-plus'
+import { ElMessage,ElMessageBox } from 'element-plus'
 
+function generateUUID() {
+    var timestamp = Date.now();
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (timestamp + Math.random() * 16) % 16 | 0;
+        timestamp = Math.floor(timestamp / 16);
+        var v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+    return uuid;
+}
 // const config = reactive(getSharedConfig());
 
 const cookie = JSON.parse(Cookies.get("num") ?? "{}")
@@ -228,6 +284,7 @@ export default defineComponent({
     },
     data() {
         return {
+            activeTabName: Cookies.get("activeTabName")?? "common",
             robotNum: cookie.robotNum ?? 0,
             scamNum: cookie.scamNum ?? 0,
             commonNum: cookie.commonNum ?? 0,
@@ -244,6 +301,10 @@ export default defineComponent({
                 limitNum:300,
                 quietMode: false,
                 resumeTweeter: false,
+                tweetNum: 10,
+                loopMinute:10,
+                onlyGetTweet:false,
+                runHideFunc: false,
             },
             manifest,
             user_i18n: chrome.i18n.getMessage("user_i18n"),
@@ -281,7 +342,6 @@ export default defineComponent({
     watch: {
         config:{
             handler:function(val,oldVal){
-                debugger;
                 var that = this;
                 let value = toRaw(val);
                 console.log("watch:");
@@ -289,6 +349,12 @@ export default defineComponent({
                 chrome.storage.sync.set(value);
             },
             deep:true
+        },
+        activeTabName:{
+            handler:function(val,oldVal){
+                var that = this;
+                Cookies.set("activeTabName",val);
+            }
         },
         
         'config.run' : function (newQuestion, oldQuestion) {
@@ -361,6 +427,63 @@ export default defineComponent({
 
     },
     methods: {
+        anonymousLogin(){
+            var that = this;
+            ElMessageBox.confirm(
+                '匿名登录账户无法进行多设备状态同步，且若登录状态失效（一般情况下不会失效），需重头开始屏蔽。',
+                '提示',
+                {
+                confirmButtonText: '确认',
+                cancelButtonText: '取消',
+                type: 'success',
+                }
+            )
+            .then(() => {
+                that.registerForm = {};
+
+                that.registerForm.username = generateUUID()+"@random.com";
+                that.registerForm.password = generateUUID().substring(0,20);
+                
+                register(that.registerForm).then(res => {
+                    login(that.registerForm.username, that.registerForm.password, "", "")
+                        .then((res) => {
+                            setToken(res.token);
+                            // this.$router.push({ path: this.redirect || "/" }).catch(() => {});
+                            that.config.token = getToken();
+                            console.log(that.config.token);
+                            // localStorage.setItem("app_token",res.token);
+                            // commit("SET_TOKEN", res.token);
+                            that.loading = false;
+                            getCount().then((res) => {
+                                that.robotNum = res.data.robotNum
+                                that.scamNum = res.data.scamNum
+                                that.commonNum = res.data.commonNum
+                                that.resumeNum = res.data.resumeNum
+                                Cookies.set("num", JSON.stringify({
+                                    robotNum: res.data.robotNum,
+                                    scamNum: res.data.scamNum,
+                                    commonNum: res.data.commonNum,
+                                    resumeNum: res.data.resumeNum
+                                }))
+                            })
+                            .catch((error) => {
+                                console.log(error);
+                            });
+                        })
+                        .catch((error) => {
+                            this.loading = false;
+                            if (this.captchaEnabled) {
+                                this.getCode();
+                            }
+                        });
+                }).catch(() => {
+                    this.loading = false;
+                })
+            })
+            .catch(() => {
+            })
+            
+        },
         handleRegister() {
 
             chrome.tabs.create({
@@ -469,6 +592,46 @@ export default defineComponent({
             }
 
         },
+        runHideFuncMonitor(runHideFunc) {
+            var that = this;
+            getInfo().then((res) => {
+                let isFound = res.roles.indexOf('advance')
+                if (isFound>0){
+                    that.config.runHideFunc = !runHideFunc;
+                    if (that.config.runHideFunc) {
+                        var query = { active: true, currentWindow: true };
+                        chrome.tabs.query(query, function callback(tabs) {
+                            var currentTab = tabs[0]; // there will be only one in this array
+                            if (currentTab.url.indexOf("twitter.com") < 0) {
+                                chrome.tabs.create({
+                                    url: "https://twitter.com/home",
+                                });
+                            }
+                            // console.log(currentTab); // also has properties like currentTab.id
+                        });
+                    }
+                }else{
+                    ElMessageBox.confirm(
+                        '尚未解锁该功能，是否解锁？',
+                        '提示',
+                        {
+                        confirmButtonText: '确认',
+                        cancelButtonText: '取消',
+                        type: 'success',
+                        }
+                    )
+                    .then(() => {
+                        chrome.tabs.create({
+                            url: "https://twitter.cyberworld.win/web/index",
+                        });
+                    })
+                    .catch(() => {
+                    })
+                }
+            }).catch((error) => {
+            });
+
+        },
         openTelegramUrl() {
             chrome.tabs.create({
                 url: "https://t.me/PornTwitterKiller",
@@ -487,6 +650,11 @@ export default defineComponent({
         openWaitPage(kind) {
             chrome.tabs.create({
                 url: "https://twitter.cyberworld.win/web/twitter/pornWait?kind="+kind,
+            });
+        },
+        openHiddenPage(){
+            chrome.tabs.create({
+                url: "https://twitter.cyberworld.win/web/twitter/hiddenReply",
             });
         },
         logoutSystem() {
