@@ -101,7 +101,11 @@
 项目截止目前为止，无任何经济收益。所有社区成员均是为爱生电。
 
 项目的区块链地址：
-0x66D95997343c887c565945D96cC24627c442655b
+TVuNhuZW2GukRUigxiEaL36HPu4re37nco(TRON)
+0x66D95997343c887c565945D96cC24627c442655b（ETH）
+34osmaHd6LhXJBxyadMtYZDiK3EKa3kzqS(Bitcoin)
+
+
 
 dePay捐赠：
 [dePay捐赠链接](https://link.depay.com/6lweu1hswErtSSC1JRXf8a)
