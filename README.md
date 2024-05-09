@@ -75,7 +75,7 @@
 
 ## 使用方法
 
-[电脑端使用教程](https://twitter.com/PornKiller2023/status/1705200627352301800)
+[电脑端使用教程](https://twitter.com/PornKiller2023/status/1717184498373370239)
 
 [手机端使用教程](https://twitter.com/PornKiller2023/status/1707410040146260393)
 
